@@ -1,0 +1,11 @@
+date,amount,counterparty,memo,reference
+2026-04-01T10:00:00Z,1500.00,Acme Corp,Monthly invoice payment,INV-2026-001
+2026-04-01T10:05:00Z,1500.00,Acme Corp,Monthly invoice payment,INV-2026-001
+2026-04-02T14:30:00Z,750.50,Beta LLC,Consulting services Q1,CON-2026-042
+2026-04-03T09:15:00Z,2200.00,Gamma Industries,Equipment purchase,PO-2026-118
+2026-04-03T09:20:00Z,2201.50,Gamma Industries,Equipment purchase,PO-2026-118
+2026-04-05T16:45:00Z,425.00,Delta Services,Office supplies,SUP-2026-033
+2026-04-07T11:00:00Z,8900.00,Epsilon Ltd,Annual license renewal,LIC-2026-005
+2026-04-07T11:02:00Z,8900.00,Epsilon Ltd,Annual license renewal,LIC-2026-005
+2026-04-08T08:30:00Z,150.75,Zeta Corp,Miscellaneous,MISC-2026-011
+2026-04-09T13:00:00Z,3750.00,Eta Partners,Legal retainer,RET-2026-Q2
