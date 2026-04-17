@@ -51,13 +51,6 @@ func generateKey() []byte {
 	return key
 }
 
-func maskValue(value string) string {
-	if len(value) <= 4 {
-		return "****"
-	}
-	return "****" + value[len(value)-4:]
-}
-
 func TestEncryptDecryptRoundTrip(t *testing.T) {
 	key := generateKey()
 
@@ -211,55 +204,6 @@ func TestGCMOverhead(t *testing.T) {
 	// GCM adds a 16-byte authentication tag
 	if gcm.Overhead() != 16 {
 		t.Errorf("GCM overhead = %d, want 16", gcm.Overhead())
-	}
-}
-
-func TestMaskValue(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"1234567890", "****7890"},
-		{"123456", "****3456"},
-		{"12345", "****2345"},
-		{"1234", "****"},
-		{"123", "****"},
-		{"1", "****"},
-		{"", "****"},
-		{"SSN-123-45-6789", "****6789"},
-		{"ABCDEFGHIJ", "****GHIJ"},
-	}
-
-	for _, tt := range tests {
-		result := maskValue(tt.input)
-		if result != tt.expected {
-			t.Errorf("maskValue(%q) = %q, want %q", tt.input, result, tt.expected)
-		}
-	}
-}
-
-func TestMaskValueNeverRevealsFullValue(t *testing.T) {
-	sensitiveValues := []string{
-		"4111111111111111",
-		"123-45-6789",
-		"BANK-ACC-12345678",
-	}
-
-	for _, val := range sensitiveValues {
-		masked := maskValue(val)
-		if masked == val {
-			t.Errorf("masked value should not equal original: %q", val)
-		}
-		if !strings.HasPrefix(masked, "****") {
-			t.Errorf("masked value should start with ****: %q", masked)
-		}
-		// Masked value should not reveal more than last 4 chars
-		if len(val) > 4 {
-			revealed := masked[4:]
-			if len(revealed) > 4 {
-				t.Errorf("masked value reveals more than 4 chars: %q", masked)
-			}
-		}
 	}
 }
 

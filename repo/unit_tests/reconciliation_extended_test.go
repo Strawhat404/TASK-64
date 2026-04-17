@@ -290,7 +290,7 @@ func TestMaximumPossibleScore(t *testing.T) {
 	}
 }
 
-func TestAutoMatchThreshold(t *testing.T) {
+func TestAutoMatchThresholdBoundaries(t *testing.T) {
 	autoMatchThreshold := 70.0
 	manualReviewMin := 50.0
 	manualReviewMax := 70.0
@@ -417,7 +417,7 @@ func TestLevenshteinEdgeCases(t *testing.T) {
 	}
 }
 
-func TestLevenshteinSimilarityBounds(t *testing.T) {
+func TestLevenshteinSimilarityRange(t *testing.T) {
 	pairs := [][2]string{
 		{"hello", "hello"},
 		{"hello", "world"},
