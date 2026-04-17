@@ -42,10 +42,19 @@ record_fail() {
 }
 
 ###############################################################################
-# Identify containers
+# Identify containers — or spin up a fresh test environment
 ###############################################################################
 BACKEND_CONTAINER=$(docker ps --filter "name=backend" --filter "status=running" \
   --format '{{.Names}}' | head -1)
+
+if [ -z "$BACKEND_CONTAINER" ]; then
+  echo "Backend container not running — starting stack for tests..."
+  cd "$REPO_DIR"
+  docker compose up -d --wait 2>&1 || true
+  sleep 5
+  BACKEND_CONTAINER=$(docker ps --filter "name=backend" --filter "status=running" \
+    --format '{{.Names}}' | head -1)
+fi
 
 if [ -z "$BACKEND_CONTAINER" ]; then
   echo "ERROR: Backend container is not running."

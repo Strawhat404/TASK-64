@@ -4,9 +4,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-compliance}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-compliance_secret}
-      POSTGRES_DB: ${POSTGRES_DB:-compliance_console}
+      POSTGRES_USER: compliance
+      POSTGRES_PASSWORD: compliance_secret
+      POSTGRES_DB: compliance_console
     volumes:
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/01_init.sql
       - ./backend/db/governance_schema.sql:/docker-entrypoint-initdb.d/02_governance.sql
@@ -18,7 +18,7 @@ services:
     expose:
       - "5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-compliance}"]
+      test: ["CMD-SHELL", "pg_isready -U compliance -d compliance_console"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -33,9 +33,9 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: ${POSTGRES_USER:-compliance}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-compliance_secret}
-      DB_NAME: ${POSTGRES_DB:-compliance_console}
+      DB_USER: compliance
+      DB_PASSWORD: compliance_secret
+      DB_NAME: compliance_console
     expose:
       - "8080"
     networks:
