@@ -1,25 +1,62 @@
 # Local Operations & Compliance Console
 
+**Project type:** Fullstack (Go + React)
+
 A high-security, offline-first full-stack system for internal network deployment. Manages service scheduling, financial reconciliation, content governance, and compliance workflows with multi-tenant support and role-based access control.
 
 ## Prerequisites
 
 - Docker Engine 24+ and Docker Compose v2
-- (Optional for local dev) Go 1.22+, Node.js 20+, PostgreSQL 16+
 
 ## Quick Start
 
 ```bash
 cd repo/
-cp .env.example .env    # Review and adjust as needed
-docker compose up -d    # Builds and starts all services
+docker-compose up
 ```
 
-Access the console at **https://localhost:3443** (self-signed TLS certificate).
+Access the console at **https://localhost:3443** (accept the self-signed TLS certificate warning in your browser).
 
-Default credentials:
-- Username: `admin`
-- Password: `Admin12345!!!`
+## Demo Credentials
+
+All demo users share the same password: `Admin12345!!!`
+
+| Username | Password | Role | Access |
+|----------|----------|------|--------|
+| `admin` | `Admin12345!!!` | Administrator | Full system access, user management, security controls |
+| `scheduler_user` | `Admin12345!!!` | Scheduler | Service catalog, scheduling, staff management |
+| `reviewer_user` | `Admin12345!!!` | Reviewer | Content governance, moderation queue |
+| `auditor_user` | `Admin12345!!!` | Auditor | Audit logs, reconciliation, exception management |
+
+> These accounts are seeded automatically by the database initialization scripts on first startup.
+
+## Verification
+
+After `docker-compose up` finishes (all four containers healthy), verify the system works:
+
+```bash
+# 1. Health check — should return {"status":"ok"}
+curl -sk https://localhost:3443/api/health
+
+# 2. Login as admin — should return 200 with user JSON
+curl -sk -X POST https://localhost:3443/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"Admin12345!!!"}' \
+  -c /tmp/session.txt
+
+# 3. List services (authenticated) — should return 200 with JSON array
+curl -sk https://localhost:3443/api/services -b /tmp/session.txt
+
+# 4. Check audit logs — should return 200 with paginated entries
+curl -sk https://localhost:3443/api/audit/logs -b /tmp/session.txt
+```
+
+**Expected browser flow:**
+1. Open `https://localhost:3443` and accept the certificate warning.
+2. Login with `admin` / `Admin12345!!!` — you should see the Dashboard with schedule stats and quick actions.
+3. Navigate to **Services** — verify the service catalog table loads.
+4. Navigate to **Schedules** — verify date picker and schedule list renders.
+5. Navigate to **Security** — verify encryption keys and audit ledger sections load.
 
 ## Architecture
 
@@ -53,19 +90,90 @@ Only Caddy's port 3443 is exposed externally. All other services communicate via
 | **Reviewer** | Content governance, moderation queue |
 | **Auditor** | Audit logs, reconciliation, exception management |
 
-## API Route Groups
+## API Endpoints
 
-| Group | Prefix | Description |
-|-------|--------|-------------|
-| Auth | `/api/auth` | Login, logout, session |
-| Users | `/api/users` | User CRUD (admin) |
-| Services | `/api/services` | Service catalog with pricing |
-| Schedules | `/api/schedules` | Scheduling with conflict detection |
-| Staff | `/api/staff` | Staff roster management |
-| Audit | `/api/audit/logs` | Audit log viewer |
-| Governance | `/api/governance` | Content moderation, gray-release, versioning |
-| Reconciliation | `/api/reconciliation` | Financial matching, exceptions |
-| Security | `/api/security` | Encryption, audit ledger, legal holds |
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| GET | `/api/health` | Public | Health check |
+| POST | `/api/auth/login` | Public | Authenticate user |
+| POST | `/api/auth/logout` | Authenticated | End session |
+| GET | `/api/auth/session` | Authenticated | Validate session |
+| GET | `/api/users` | Administrator | List users |
+| GET | `/api/users/:id` | Administrator | Get user |
+| POST | `/api/users` | Administrator | Create user |
+| PUT | `/api/users/:id` | Administrator | Update user |
+| DELETE | `/api/users/:id` | Administrator | Deactivate user |
+| GET | `/api/services` | Authenticated | List services |
+| GET | `/api/services/:id` | Authenticated | Get service |
+| GET | `/api/services/:id/pricing` | Authenticated | Calculate pricing |
+| POST | `/api/services` | Administrator, Scheduler | Create service |
+| PUT | `/api/services/:id` | Administrator, Scheduler | Update service |
+| DELETE | `/api/services/:id` | Administrator | Deactivate service |
+| GET | `/api/schedules` | Authenticated | List schedules |
+| POST | `/api/schedules` | Administrator, Scheduler | Create schedule |
+| PUT | `/api/schedules/:id` | Administrator, Scheduler | Update schedule |
+| DELETE | `/api/schedules/:id` | Administrator, Scheduler | Cancel schedule |
+| POST | `/api/schedules/:id/confirm` | Authenticated | Confirm assignment |
+| GET | `/api/schedules/available-staff` | Authenticated | Find available staff |
+| POST | `/api/schedules/:id/backup` | Administrator, Scheduler | Request backup staff |
+| POST | `/api/schedules/backup/:id/confirm` | Administrator, Scheduler | Confirm backup |
+| GET | `/api/staff` | Authenticated | List staff |
+| GET | `/api/staff/:id` | Authenticated | Get staff member |
+| POST | `/api/staff` | Administrator, Scheduler | Create staff |
+| PUT | `/api/staff/:id` | Administrator, Scheduler | Update staff |
+| DELETE | `/api/staff/:id` | Administrator | Delete staff |
+| GET | `/api/staff/:id/credentials` | Authenticated | List credentials |
+| POST | `/api/staff/:id/credentials` | Administrator, Scheduler | Add credential |
+| GET | `/api/staff/:id/availability` | Authenticated | List availability |
+| POST | `/api/staff/:id/availability` | Administrator, Scheduler | Add availability |
+| GET | `/api/audit/logs` | Auditor, Administrator | Audit log viewer |
+| POST | `/api/governance/content` | Administrator, Reviewer | Create content |
+| GET | `/api/governance/content` | Authenticated | List content |
+| GET | `/api/governance/content/:id` | Authenticated | Get content |
+| PUT | `/api/governance/content/:id` | Administrator, Reviewer | Update content |
+| POST | `/api/governance/content/:id/submit` | Administrator, Reviewer | Submit for review |
+| POST | `/api/governance/content/:id/promote` | Administrator | Promote to published |
+| GET | `/api/governance/content/:id/versions` | Authenticated | Version history |
+| POST | `/api/governance/content/:id/rollback` | Administrator | Rollback version |
+| POST | `/api/governance/content/:id/re-review` | Administrator, Reviewer | Trigger re-review |
+| GET | `/api/governance/reviews/pending` | Administrator, Reviewer | Pending reviews |
+| POST | `/api/governance/reviews/:id/decide` | Administrator, Reviewer | Review decision |
+| GET | `/api/governance/gray-release` | Authenticated | Gray-release items |
+| GET | `/api/governance/rules` | Administrator | List rules |
+| POST | `/api/governance/rules` | Administrator | Create rule |
+| PUT | `/api/governance/rules/:id` | Administrator | Update rule |
+| DELETE | `/api/governance/rules/:id` | Administrator | Delete rule |
+| GET | `/api/governance/content/:id/versions/diff` | Administrator, Reviewer | Diff versions |
+| POST | `/api/governance/relationships` | Administrator, Reviewer | Create relationship |
+| GET | `/api/governance/relationships` | Authenticated | List relationships |
+| DELETE | `/api/governance/relationships/:id` | Administrator | Delete relationship |
+| POST | `/api/reconciliation/import` | Administrator, Auditor | Import feed |
+| GET | `/api/reconciliation/feeds` | Administrator, Auditor | List feeds |
+| GET | `/api/reconciliation/feeds/:id` | Administrator, Auditor | Get feed |
+| POST | `/api/reconciliation/feeds/:id/match` | Administrator, Auditor | Run matching |
+| GET | `/api/reconciliation/matches` | Administrator, Auditor | Match results |
+| GET | `/api/reconciliation/exceptions` | Administrator, Auditor | List exceptions |
+| GET | `/api/reconciliation/exceptions/export` | Administrator, Auditor | Export exceptions |
+| GET | `/api/reconciliation/exceptions/:id` | Administrator, Auditor | Get exception |
+| PUT | `/api/reconciliation/exceptions/:id/assign` | Administrator, Auditor | Assign exception |
+| PUT | `/api/reconciliation/exceptions/:id/resolve` | Administrator, Auditor | Resolve exception |
+| GET | `/api/reconciliation/summary` | Administrator, Auditor | Summary stats |
+| POST | `/api/security/sensitive` | Administrator | Store sensitive data |
+| GET | `/api/security/sensitive` | Administrator | List sensitive data |
+| GET | `/api/security/sensitive/:id` | Administrator | Get sensitive data |
+| POST | `/api/security/sensitive/:id/reveal` | Administrator | Reveal value |
+| DELETE | `/api/security/sensitive/:id` | Administrator | Delete sensitive data |
+| POST | `/api/security/keys/rotate` | Administrator | Rotate key |
+| GET | `/api/security/keys` | Administrator | Key status |
+| GET | `/api/security/keys/rotation-due` | Administrator | Rotation schedule |
+| GET | `/api/security/audit-ledger` | Administrator | Audit ledger |
+| POST | `/api/security/audit-ledger/verify` | Administrator | Verify chain |
+| GET | `/api/security/retention` | Administrator | Retention policies |
+| POST | `/api/security/retention/cleanup` | Administrator | Run cleanup |
+| GET | `/api/security/rate-limits` | Administrator | Rate limit status |
+| POST | `/api/security/legal-holds` | Administrator | Create legal hold |
+| GET | `/api/security/legal-holds` | Administrator | List legal holds |
+| PUT | `/api/security/legal-holds/:id/release` | Administrator | Release hold |
 
 ## Security Features
 
@@ -92,28 +200,26 @@ Key environment variables (see `.env.example` for full list):
 
 ## Testing
 
+All tests run inside Docker containers. No local Go or Node.js installation required.
+
 ```bash
-# Run all tests (unit + API/integration) — requires running stack
+# Run the full test suite (unit + API integration) — requires running stack
+docker-compose up -d
 ./run_tests.sh
-
-# Health check
-./tests/health_check.sh
-
-# API integration tests (individually)
-./API_tests/api_test.sh
-./API_tests/authz_boundary_test.sh
-
-# Unit tests (individually, requires Go 1.22+)
-cd unit_tests && go test -v ./...
 ```
+
+The test runner (`run_tests.sh`) executes:
+1. **Go unit tests** inside a `golang:1.22-alpine` container (tests business logic, encryption, scheduling, reconciliation matching)
+2. **API integration tests** via shell scripts inside a container connected to the backend network (real HTTP requests against the live backend)
+3. **Authorization boundary tests** validating RBAC enforcement, tenant isolation, and unauthenticated access rejection
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| DB connection refused | Ensure `db` container is healthy: `docker compose ps` |
+| DB connection refused | Ensure `db` container is healthy: `docker-compose ps` |
 | TLS certificate warning | Expected with self-signed cert; add exception in browser |
-| Migration errors | Check PostgreSQL logs: `docker compose logs db` |
+| Migration errors | Check PostgreSQL logs: `docker-compose logs db` |
 | Master key not set | Set `MASTER_KEY` env var; dev default logs a warning |
 | Port 3443 in use | Change Caddy port in `docker-compose.yml` and `Caddyfile` |
 
@@ -140,8 +246,8 @@ repo/
 │   │   └── pages/               # All page components
 │   ├── Dockerfile
 │   └── package.json
-├── API_tests/                   # Integration test scripts
-├── unit_tests/                  # Go unit tests
+├── API_tests/                   # Integration test scripts (curl-based)
+├── unit_tests/                  # Go unit tests (run inside Docker)
 ├── tests/
 │   └── health_check.sh          # Health check script
 ├── run_tests.sh                 # Unified test runner (Docker-based)

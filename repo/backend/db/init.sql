@@ -160,14 +160,42 @@ CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
 INSERT INTO tenants (id, name, domain) VALUES
     ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Default Tenant', 'localhost');
 
--- Seed default admin user
--- Password: Admin12345!!! hashed with Argon2id (hex-encoded salt and key)
-INSERT INTO users (id, tenant_id, role_id, username, email, password_hash) VALUES
+-- Seed demo users for all four roles
+-- Password for all: Admin12345!!! hashed with Argon2id (hex-encoded salt and key)
+INSERT INTO users (id, tenant_id, role_id, username, email, full_name, password_hash) VALUES
     (
         'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
         'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         (SELECT id FROM roles WHERE name = 'Administrator'),
         'admin',
         'admin@localhost',
+        'System Administrator',
+        '$argon2id$v=19$m=65536,t=3,p=4$39696f4379d3e27231bd2a0c65ac5216$78df9c4a849315dca91f3b16cae5d827ee7fb2e64b4fe3cc6e1c903668dbb668'
+    ),
+    (
+        'b2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33',
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        (SELECT id FROM roles WHERE name = 'Scheduler'),
+        'scheduler_user',
+        'scheduler@localhost',
+        'Demo Scheduler',
+        '$argon2id$v=19$m=65536,t=3,p=4$39696f4379d3e27231bd2a0c65ac5216$78df9c4a849315dca91f3b16cae5d827ee7fb2e64b4fe3cc6e1c903668dbb668'
+    ),
+    (
+        'b3eebc99-9c0b-4ef8-bb6d-6bb9bd380a44',
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        (SELECT id FROM roles WHERE name = 'Reviewer'),
+        'reviewer_user',
+        'reviewer@localhost',
+        'Demo Reviewer',
+        '$argon2id$v=19$m=65536,t=3,p=4$39696f4379d3e27231bd2a0c65ac5216$78df9c4a849315dca91f3b16cae5d827ee7fb2e64b4fe3cc6e1c903668dbb668'
+    ),
+    (
+        'b4eebc99-9c0b-4ef8-bb6d-6bb9bd380a55',
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        (SELECT id FROM roles WHERE name = 'Auditor'),
+        'auditor_user',
+        'auditor@localhost',
+        'Demo Auditor',
         '$argon2id$v=19$m=65536,t=3,p=4$39696f4379d3e27231bd2a0c65ac5216$78df9c4a849315dca91f3b16cae5d827ee7fb2e64b4fe3cc6e1c903668dbb668'
     );
