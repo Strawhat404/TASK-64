@@ -191,6 +191,22 @@ SVC_ID=$(json_first_id "$LAST_BODY")
 do_request GET "/staff"
 STF_ID=$(json_first_id "$LAST_BODY")
 
+# Create a service if none exist
+if [ -z "$SVC_ID" ] || [ "$SVC_ID" = "null" ]; then
+    do_request POST "/services" '{"name":"Coverage Svc For Schedule","description":"Test","base_price_usd":100,"tier":"standard","duration_minutes":60,"headcount":1}'
+    SVC_ID=$(json_field "$LAST_BODY" "id")
+fi
+
+# Create a staff member if none exist
+if [ -z "$STF_ID" ] || [ "$STF_ID" = "null" ]; then
+    do_request GET "/auth/session"
+    ADMIN_UID=$(echo "$LAST_BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('user',{}).get('id','') or d.get('id',''))" 2>/dev/null || echo "")
+    if [ -n "$ADMIN_UID" ]; then
+        do_request POST "/staff" "{\"user_id\":\"$ADMIN_UID\",\"full_name\":\"Coverage Staff For Schedule\",\"specialization\":\"general\"}"
+        STF_ID=$(json_field "$LAST_BODY" "id")
+    fi
+fi
+
 if [ -n "$SVC_ID" ] && [ -n "$STF_ID" ]; then
     SCHED_DATE=$(python3 -c "import datetime,random; print((datetime.date.today()+datetime.timedelta(days=random.randint(300,600))).isoformat())" 2>/dev/null || echo "2031-01-15")
 
@@ -369,6 +385,19 @@ echo ""
 # 5. Reconciliation Subresources
 ###############################################################################
 echo "[5] Reconciliation Operations"
+
+# Import CSV first to seed feeds and exceptions
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TEST_CSV="${SCRIPT_DIR}/test_data.csv"
+if [ -f "$TEST_CSV" ]; then
+    curl -s -o /dev/null -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+        -F "feed_type=internal" -F "file=@${TEST_CSV}" \
+        "${BASE_URL}/reconciliation/import" 2>/dev/null || true
+    # Also import as external to generate matches/exceptions
+    curl -s -o /dev/null -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+        -F "feed_type=external" -F "file=@${TEST_CSV}" \
+        "${BASE_URL}/reconciliation/import" 2>/dev/null || true
+fi
 
 do_request GET "/reconciliation/feeds"
 FEED_ID=$(json_first_id "$LAST_BODY")
