@@ -80,8 +80,7 @@ UNIT_OUTPUT=$(docker run --rm \
   golang:1.22-alpine sh -c '
     cp -r /src/unit_tests /tmp/unit_tests
     cd /tmp/unit_tests
-    rm -f go.mod go.sum
-    go mod init unit_tests 2>/dev/null || true
+    go mod download 2>/dev/null || true
     go test -v -count=1 ./... 2>&1
   ' 2>&1)
 UNIT_EXIT=$?
