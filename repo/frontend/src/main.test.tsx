@@ -39,6 +39,7 @@ describe("main.tsx bootstrap", () => {
     // The actual rendering is verified by the import above
     const mainModule = await import("./main?t=" + Date.now());
     // If import succeeded without errors, the module is valid
+    void mainModule;
     expect(true).toBe(true);
   });
 });

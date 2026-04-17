@@ -10,7 +10,7 @@ const mockedAxios = vi.mocked(axios, true);
 // Mock URL.createObjectURL and revokeObjectURL
 const mockCreateObjectURL = vi.fn(() => "blob:mock-url");
 const mockRevokeObjectURL = vi.fn();
-Object.defineProperty(global, "URL", {
+Object.defineProperty(globalThis, "URL", {
   value: { createObjectURL: mockCreateObjectURL, revokeObjectURL: mockRevokeObjectURL },
   writable: true,
 });
