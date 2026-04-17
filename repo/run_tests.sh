@@ -74,10 +74,14 @@ echo ""
 # The unit_tests package is standalone (stdlib only), so we initialise a
 # temporary module for it.
 UNIT_OUTPUT=$(docker run --rm \
-  -v "$REPO_DIR/unit_tests:/src/unit_tests" \
-  -w /src/unit_tests \
+  -e GONOSUMDB='*' \
+  -e GOFLAGS='-mod=mod' \
+  -v "$REPO_DIR/unit_tests:/src/unit_tests:ro" \
   golang:1.22-alpine sh -c '
-    go mod init unit_tests 2>/dev/null
+    cp -r /src/unit_tests /tmp/unit_tests
+    cd /tmp/unit_tests
+    rm -f go.mod go.sum
+    go mod init unit_tests 2>/dev/null || true
     go test -v -count=1 ./... 2>&1
   ' 2>&1)
 UNIT_EXIT=$?

@@ -264,9 +264,20 @@ if [ -n "$CONTENT_ID" ] && [ "$CONTENT_ID" != "null" ]; then
     do_request POST "/governance/content/$CONTENT_ID/submit"
     assert_status "POST /governance/content/:id/submit => 200" "200" "$LAST_STATUS" "$LAST_BODY" || true
 
-    # Decide on the pending review — reject first so re-review is valid
+    # Decide on the pending review for THIS content — reject first so re-review is valid
     do_request GET "/governance/reviews/pending"
-    REVIEW_ID=$(json_first_id "$LAST_BODY")
+    REVIEW_ID=$(echo "$LAST_BODY" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+items=d if isinstance(d,list) else d.get('data',[])
+content_id='$CONTENT_ID'
+# Find review for our specific content
+for item in items:
+    if str(item.get('content_id','')) == content_id:
+        print(item['id']); sys.exit(0)
+# Fallback to first
+print(items[0]['id'] if items else '')
+" 2>/dev/null || echo "")
     if [ -n "$REVIEW_ID" ]; then
         do_request POST "/governance/reviews/$REVIEW_ID/decide" '{"decision":"rejected","decision_notes":"test rejection for re-review"}'
         assert_status "POST /governance/reviews/:id/decide => 200" "200" "$LAST_STATUS" "$LAST_BODY" || true
@@ -277,9 +288,18 @@ if [ -n "$CONTENT_ID" ] && [ "$CONTENT_ID" != "null" ]; then
     do_request POST "/governance/content/$CONTENT_ID/re-review"
     assert_status "POST /governance/content/:id/re-review => 200" "200" "$LAST_STATUS" "$LAST_BODY" || true
 
-    # Promote needs approved status — get fresh review and approve
+    # Promote needs approved status — get fresh review for our content and approve
     do_request GET "/governance/reviews/pending"
-    REVIEW_ID2=$(json_first_id "$LAST_BODY")
+    REVIEW_ID2=$(echo "$LAST_BODY" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+items=d if isinstance(d,list) else d.get('data',[])
+content_id='$CONTENT_ID'
+for item in items:
+    if str(item.get('content_id','')) == content_id:
+        print(item['id']); sys.exit(0)
+print(items[0]['id'] if items else '')
+" 2>/dev/null || echo "")
     if [ -n "$REVIEW_ID2" ]; then
         do_request POST "/governance/reviews/$REVIEW_ID2/decide" '{"decision":"approved","decision_notes":"promote"}'
     fi

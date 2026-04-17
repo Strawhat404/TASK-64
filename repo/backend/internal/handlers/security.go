@@ -90,12 +90,20 @@ func (h *SecurityHandler) StoreSensitiveData(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to store sensitive data"})
 	}
 
-	h.writeAuditLog(c, "store_sensitive_data", "sensitive_data", "", map[string]interface{}{
+	// Fetch the ID of the record we just inserted so the caller can reference it.
+	var newID uuid.UUID
+	_ = h.DB.QueryRow(`
+		SELECT id FROM sensitive_data
+		WHERE tenant_id = $1 AND owner_id = $2 AND data_type = $3
+		ORDER BY created_at DESC LIMIT 1
+	`, user.TenantID, user.ID, req.DataType).Scan(&newID)
+
+	h.writeAuditLog(c, "store_sensitive_data", "sensitive_data", newID.String(), map[string]interface{}{
 		"data_type": req.DataType,
 		"label":     req.Label,
 	})
 
-	return c.JSON(http.StatusCreated, map[string]string{"message": "Sensitive data stored successfully"})
+	return c.JSON(http.StatusCreated, map[string]interface{}{"id": newID.String(), "message": "Sensitive data stored successfully"})
 }
 
 // GetSensitiveData handles GET /api/security/sensitive/:id.
