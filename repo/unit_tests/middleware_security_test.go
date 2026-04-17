@@ -140,7 +140,7 @@ func TestFailedAttemptWindowReset(t *testing.T) {
 	})
 
 	t.Run("exactly at boundary — within window", func(t *testing.T) {
-		lastFailedAt := time.Now().Add(-failedAttemptWindow)
+		lastFailedAt := time.Now().Add(-failedAttemptWindow).Add(time.Millisecond)
 		withinWindow := time.Since(lastFailedAt) <= failedAttemptWindow
 		if !withinWindow {
 			t.Error("exactly at the boundary should be within the window")
