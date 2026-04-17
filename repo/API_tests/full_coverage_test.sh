@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 ###############################################################################
 # Full API Endpoint Coverage Tests
@@ -22,7 +22,7 @@ TOTAL=0
 trap 'rm -f "$COOKIE_JAR"' EXIT
 
 HAS_JQ=false
-command -v jq &>/dev/null && HAS_JQ=true
+command -v jq >/dev/null 2>&1 && HAS_JQ=true
 
 log_result() {
     local name="$1" passed="$2" detail="${3:-}"
@@ -37,7 +37,7 @@ log_result() {
 assert_status() {
     local name="$1" expected="$2" actual="$3" body="${4:-}"
     if [ "$actual" = "$expected" ]; then log_result "$name" "true"; return 0
-    else log_result "$name" "false" "expected $expected, got $actual. Body: ${body:0:200}"; return 1; fi
+    else log_result "$name" "false" "expected $expected, got $actual. Body: $(echo "$body" | cut -c1-200)"; return 1; fi
 }
 
 assert_body_contains() {
@@ -52,14 +52,14 @@ assert_body_contains() {
 json_field() {
     local body="$1" field="$2"
     if [ "$HAS_JQ" = "true" ]; then echo "$body" | jq -r ".$field" 2>/dev/null || echo ""
-    elif command -v python3 &>/dev/null; then
+    elif command -v python3 >/dev/null 2>&1; then
         echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$field',''))" 2>/dev/null || echo ""
     else echo ""; fi
 }
 
 json_first_id() {
     local body="$1"
-    if command -v python3 &>/dev/null; then
+    if command -v python3 >/dev/null 2>&1; then
         echo "$body" | python3 -c "
 import sys,json
 d=json.load(sys.stdin)
@@ -74,10 +74,18 @@ print(items[0]['id'] if items else '')
 do_request() {
     local method="$1" endpoint="$2" data="${3:-}"
     local url="${BASE_URL}${endpoint}"
-    local args=(-s -w '\n%{http_code}' -b "$COOKIE_JAR" -c "$COOKIE_JAR" -H "Content-Type: application/json")
-    [ "$method" != "GET" ] && args+=(-X "$method")
-    [ -n "$data" ] && args+=(-d "$data")
-    local resp; resp=$(curl "${args[@]}" "$url" 2>/dev/null) || true
+    local extra_args=""
+    [ "$method" != "GET" ] && extra_args="$extra_args -X $method"
+    local resp
+    if [ -n "$data" ]; then
+        resp=$(curl -s -w '\n%{http_code}' -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+            -H "Content-Type: application/json" \
+            $extra_args -d "$data" "$url" 2>/dev/null) || true
+    else
+        resp=$(curl -s -w '\n%{http_code}' -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+            -H "Content-Type: application/json" \
+            $extra_args "$url" 2>/dev/null) || true
+    fi
     LAST_STATUS=$(echo "$resp" | tail -1)
     LAST_BODY=$(echo "$resp" | sed '$d')
 }
@@ -196,7 +204,7 @@ if [ -n "$SVC_ID" ] && [ -n "$STF_ID" ]; then
         if [ "$LAST_STATUS" = "200" ] || [ "$LAST_STATUS" = "404" ]; then
             log_result "POST /schedules/:id/confirm => 200" "true"
         else
-            log_result "POST /schedules/:id/confirm => 200" "false" "expected 200, got $LAST_STATUS. Body: ${LAST_BODY:0:200}"
+        log_result "POST /schedules/:id/confirm => 200" "false" "expected 200, got $LAST_STATUS. Body: $(echo "$LAST_BODY" | cut -c1-200)"
         fi
 
         do_request PUT "/schedules/$SCHED_ID" '{"client_name":"Updated CovTest"}'
@@ -308,7 +316,7 @@ print(items[0]['id'] if items else '')
     if [ "$LAST_STATUS" = "200" ] || [ "$LAST_STATUS" = "400" ]; then
         log_result "POST /governance/content/:id/promote => 200" "true"
     else
-        log_result "POST /governance/content/:id/promote => 200" "false" "expected 200/400, got $LAST_STATUS. Body: ${LAST_BODY:0:200}"
+        log_result "POST /governance/content/:id/promote => 200" "false" "expected 200/400, got $LAST_STATUS. Body: $(echo "$LAST_BODY" | cut -c1-200)"
     fi
 
     do_request POST "/governance/content/$CONTENT_ID/rollback" '{"target_version":1}'

@@ -131,9 +131,9 @@ for script in "$REPO_DIR"/API_tests/*_test.sh; do
     --network container:"$BACKEND_CONTAINER" \
     -v "$REPO_DIR/API_tests:/tests" \
     alpine:3.20 sh -c '
-      apk add --no-cache -q bash curl python3 docker-cli >/dev/null 2>&1
+      apk add --no-cache -q curl python3 >/dev/null 2>&1
       chmod +x /tests/'"$script_name"'
-      bash /tests/'"$script_name"' 2>&1
+      sh /tests/'"$script_name"' 2>&1
     ' 2>&1)
   EXIT_CODE=$?
 
