@@ -92,7 +92,20 @@ echo ""
 # 0. Login
 ###############################################################################
 echo "[0] Admin Login"
-do_request POST "/auth/login" '{"username":"admin","password":"Admin12345!!!"}'
+# Retry login up to 5 times with backoff to handle rate limiting from prior test suites
+LOGIN_ATTEMPTS=0
+while [ $LOGIN_ATTEMPTS -lt 5 ]; do
+    do_request POST "/auth/login" '{"username":"admin","password":"Admin12345!!!"}'
+    if [ "$LAST_STATUS" = "200" ]; then
+        break
+    elif [ "$LAST_STATUS" = "429" ]; then
+        LOGIN_ATTEMPTS=$((LOGIN_ATTEMPTS + 1))
+        echo "  Rate limited (attempt $LOGIN_ATTEMPTS), waiting 65s for window reset..."
+        sleep 65
+    else
+        break
+    fi
+done
 assert_status "POST /auth/login => 200" "200" "$LAST_STATUS" "$LAST_BODY" || true
 echo ""
 

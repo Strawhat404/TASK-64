@@ -97,13 +97,13 @@ while IFS= read -r line; do
 done <<< "$UNIT_OUTPUT"
 
 # If go test failed but we found no individual results, record a top-level failure
-if [ "$UNIT_EXIT" -ne 0 ] && ! echo "$UNIT_OUTPUT" | grep -q '--- FAIL:'; then
+if [ "$UNIT_EXIT" -ne 0 ] && ! echo "$UNIT_OUTPUT" | grep -q "FAIL:"; then
   record_fail "unit: go test exited with code $UNIT_EXIT"
   echo "$UNIT_OUTPUT" | tail -20
 fi
 
 # If we got zero results (e.g. no test files found), note it
-if ! echo "$UNIT_OUTPUT" | grep -q -- '--- PASS:' && ! echo "$UNIT_OUTPUT" | grep -q -- '--- FAIL:'; then
+if ! echo "$UNIT_OUTPUT" | grep -q "PASS:" && ! echo "$UNIT_OUTPUT" | grep -q "FAIL:"; then
   if [ "$UNIT_EXIT" -eq 0 ]; then
     echo "  (no individual test results found)"
   fi
